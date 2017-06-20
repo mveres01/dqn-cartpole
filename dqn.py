@@ -111,9 +111,10 @@ class Agent(object):
         a_sym = T.icol('actions') #(n, 1)
         r_sym = T.col('rewards')
         t_sym = T.col('terminal_state')
+        sym_vars = [s0_sym, s1_sym, a_sym, r_sym, t_sym]
 
         # Training phase uses non-deterministic mapping
-        loss = self._build_loss(s0_sym, a_sym, r_sym, s1_sym, t_sym, deterministic)
+        loss = self._build_loss(*sym_vars, deterministic=deterministic)
         loss = loss.sum()
 
         if is_training:
@@ -122,8 +123,7 @@ class Agent(object):
         else:
             updates = None
 
-        return theano.function([s0_sym, a_sym, r_sym, s1_sym, t_sym],
-                               loss, updates=updates)
+        return theano.function(sym_vars, loss, updates=updates)
 
 
     def choose_action(self, state):
