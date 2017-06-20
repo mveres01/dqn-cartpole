@@ -111,7 +111,7 @@ class Agent(object):
         a_sym = T.icol('actions') #(n, 1)
         r_sym = T.col('rewards')
         t_sym = T.col('terminal_state')
-        sym_vars = [s0_sym, s1_sym, a_sym, r_sym, t_sym]
+        sym_vars = [s0_sym, a_sym, r_sym, s1_sym, t_sym]
 
         # Training phase uses non-deterministic mapping
         loss = self._build_loss(*sym_vars, deterministic=deterministic)
