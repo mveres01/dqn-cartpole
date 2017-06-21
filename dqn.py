@@ -38,7 +38,7 @@ class Agent(object):
 
         if epsilon_min is not None:
             assert epsilon_min < epsilon, 'Epsilon(min) must be < epsilon(max).'
-        
+
         if capacity < batch_size:
             raise ValueError('Replay capacity must be > batch_size.')
 
@@ -56,10 +56,23 @@ class Agent(object):
         self.q_update_iter = q_update_iter # Update the q_target every C iter
         self.step = 0
         self.replay_buffer = ReplayBuffer(capacity, state_shape)
-        self.train_fn = self._build_train_fn(deterministic=False)
+
+        # Build training and sampling functions
+        s0_sym = nn.get_all_layers(self.q_network)[0].input_var
+        s1_sym = nn.get_all_layers(self.q_targets)[0].input_var
+        a_sym = T.icol('actions') #(n, 1)
+        r_sym = T.col('rewards')
+        t_sym = T.col('terminal_state')
+        sym_vars = [s0_sym, a_sym, r_sym, s1_sym, t_sym]
+
+        # Training phase uses non-deterministic mapping
+        loss = T.sum(self._build_loss(*sym_vars, deterministic=False))
+        params = nn.get_all_params(self.q_network, trainable=True)
+        updates = lasagne.updates.adam(loss, params, self.lr, beta1=0.9)
+
+        self.train_fn = theano.function(sym_vars, loss, updates=updates)
 
         # Build function for sampling from DQN
-        s0_sym = nn.get_all_layers(self.q_network)[0].input_var
         pred = nn.get_output(self.q_network, deterministic=True)
         self.pred_fn = theano.function([s0_sym], pred)
 
@@ -72,7 +85,7 @@ class Agent(object):
         dependent on whether or not the agent has reached the terminal state;
 
         y_t = r_t if terminal, else r_t + max_{a'} gamma * Q^(s_{t+1}, a')
-        
+
         Parameters
         ----------
         s0_sym: symbolic variable for current state
@@ -82,7 +95,7 @@ class Agent(object):
         t_sym: symbolic variable denoting whether next state is terminal
         """
 
-        # Prepare target Q-values; build a mask using t_sym to denote whether 
+        # Prepare target Q-values; build a mask using t_sym to denote whether
         # to use the 'terminal' reward (t_sym=1) or discounted reward (t_sym=0)
         q_targets = nn.get_output(self.q_targets, deterministic=deterministic)
         q_targets = self.discount * T.max(q_targets, axis=1, keepdims=True)
@@ -102,30 +115,6 @@ class Agent(object):
         return T.sqr(q_targets - q_pred)
 
 
-    def _build_train_fn(self, deterministic=False, is_training=True):
-        """Convenience function for compiling theano train /valid graphs."""
-
-        # Build training and sampling functions
-        s0_sym = nn.get_all_layers(self.q_network)[0].input_var
-        s1_sym = nn.get_all_layers(self.q_targets)[0].input_var
-        a_sym = T.icol('actions') #(n, 1)
-        r_sym = T.col('rewards')
-        t_sym = T.col('terminal_state')
-        sym_vars = [s0_sym, a_sym, r_sym, s1_sym, t_sym]
-
-        # Training phase uses non-deterministic mapping
-        loss = self._build_loss(*sym_vars, deterministic=deterministic)
-        loss = loss.sum()
-
-        if is_training:
-            params = nn.get_all_params(self.q_network, trainable=True)
-            updates = lasagne.updates.adam(loss, params, self.lr, beta1=0.9)
-        else:
-            updates = None
-
-        return theano.function(sym_vars, loss, updates=updates)
-
-
     def choose_action(self, state):
         """Returns an action for the agent to perform in the environment.
 
@@ -139,6 +128,10 @@ class Agent(object):
         if np.random.uniform(0.0, 1.0, size=1) < self.epsilon:
             return np.random.randint(0, self.num_actions, size=1)[0]
         return np.argmax(self.pred_fn(state))
+
+
+    def update_buffer(self, s0, a, r, s1, terminal):
+        self.replay_buffer.update(s0, a, r, s1, terminal)
 
 
     def update_policy(self):
@@ -158,7 +151,3 @@ class Agent(object):
             diff = self.epsilon_max - self.epsilon_min
             curr_eps = self.epsilon - diff / self.epsilon_iter
             self.epsilon = np.maximum(self.epsilon_min, curr_eps)
-
-
-    def update_buffer(self, s0, a, r, s1, terminal):
-        self.replay_buffer.update(s0, a, r, s1, terminal)

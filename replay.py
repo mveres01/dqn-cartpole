@@ -21,7 +21,7 @@ class ReplayBuffer(object):
         self.terminals = terminals or np.zeros((capacity, 1), dtype=np.float32)
 
         self.step = 0
-        self.cycle = 0
+        self.cycle = 0 # Whether we've hit the cap on memory size
 
 
     def update(self, s0, a, r, s1, terminal):

@@ -15,8 +15,8 @@ env = gym.make(env_name)
 
 state_shape = env.observation_space.shape
 num_actions = env.action_space.n
-
-q_learner = dqn.Agent(state_shape, num_actions)
+batch_size = 64
+q_learner = dqn.Agent(state_shape, num_actions, batch_size=batch_size)
 
 MAX_EPISODES = 10000
 MAX_STEPS = 200
