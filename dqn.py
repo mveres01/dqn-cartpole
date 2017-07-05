@@ -26,6 +26,7 @@ def build_network(state_shape, num_actions):
 
 class Agent(object):
     """Implements an agent that follows deep Q-learning policy."""
+
     def __init__(self, state_shape, num_actions, epsilon=1.0, epsilon_min=0.1,
                  epsilon_iter=100000, discount=0.99, lrate=1e-3,
                  batch_size=100, q_update_iter=1000, capacity=50000):
