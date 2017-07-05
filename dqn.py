@@ -8,7 +8,10 @@ from replay import ReplayBuffer
 
 
 def build_network(state_shape, num_actions):
-    """Builds a network with input size state_shape & num_actions output."""
+    """Builds a network with input size state_shape & num_actions output.
+        
+    As problem is discrete, we predict the Q-value for all possible actions.
+    """
 
     input_shape = (None, ) + state_shape
     W_init = lasagne.init.GlorotUniform()
@@ -29,17 +32,13 @@ class Agent(object):
 
         if not isinstance(state_shape, tuple):
             raise AssertionError('state_shape must be of type <tuple>.')
-
-        if len(state_shape) == 0:
+        elif len(state_shape) == 0:
             raise AssertionError('No state space dimensions provided.')
-
-        if num_actions == 0:
+        elif num_actions == 0:
             raise ValueError('Number of actions must be > 0.')
-
-        if epsilon_min is not None:
+        elif epsilon_min is not None:
             assert epsilon_min < epsilon, 'Epsilon(min) must be < epsilon(max).'
-
-        if capacity < batch_size:
+        elif capacity < batch_size:
             raise ValueError('Replay capacity must be > batch_size.')
 
         self.state_shape = state_shape
@@ -99,7 +98,7 @@ class Agent(object):
         # to use the 'terminal' reward (t_sym=1) or discounted reward (t_sym=0)
         q_targets = nn.get_output(self.q_targets, deterministic=deterministic)
         q_targets = self.discount * T.max(q_targets, axis=1, keepdims=True)
-        q_targets = r_sym + (T.ones_like(t_sym) - t_sym) * q_targets
+        q_targets = r_sym + (1. - t_sym) * q_targets
 
         # Q-Function for current state
         q_pred = nn.get_output(self.q_network, deterministic=deterministic)
@@ -113,7 +112,6 @@ class Agent(object):
         q_pred = T.sum(q_pred * action_mask, axis=1, keepdims=True)
 
         return T.sqr(q_targets - q_pred)
-
 
     def choose_action(self, state):
         """Returns an action for the agent to perform in the environment.
@@ -129,10 +127,8 @@ class Agent(object):
             return np.random.randint(0, self.num_actions, size=1)[0]
         return np.argmax(self.pred_fn(state))
 
-
     def update_buffer(self, s0, a, r, s1, terminal):
         self.replay_buffer.update(s0, a, r, s1, terminal)
-
 
     def update_policy(self):
         """Updates Q-networks using replay memory data + performing SGD"""

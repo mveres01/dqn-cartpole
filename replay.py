@@ -34,7 +34,7 @@ class ReplayBuffer(object):
         self.terminals[self.step] = terminal
 
         self.step += 1
-        if self.step == self.capacity:
+        if self.step >= self.capacity:
             self.step = 0
             self.cycle += 1
 

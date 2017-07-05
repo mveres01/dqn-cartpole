@@ -37,10 +37,15 @@ for i in xrange(MAX_EPISODES):
     total_rewards += reward
 
     q_learner.update_buffer(state, action, reward, next_state, done)
-    q_learner.update_policy()
-    state = next_state
 
-    if done: break
+    # Only start learning after buffer has some experience in it
+    if i > 50:
+        q_learner.update_policy()
+
+
+    state = next_state
+    if done: 
+        break
 
   episode_history.append(total_rewards)
   mean_rewards = np.mean(episode_history)
