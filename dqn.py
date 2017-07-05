@@ -76,7 +76,6 @@ class Agent(object):
         pred = nn.get_output(self.q_network, deterministic=True)
         self.pred_fn = theano.function([s0_sym], pred)
 
-
     def _build_loss(self, s0_sym, a_sym, r_sym, s1_sym, t_sym, deterministic=False):
         """Builds the loss for the DQN Agent.
 
